@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 There is **no build step, no bundler, and no test suite**. The empty `yarn.lock` is a stub — do not run `yarn install` or add a `package.json` expecting it to mean anything.
 
-- Open [SRCafe.html](SRCafe.html) directly in a browser, or serve the directory statically (e.g. `python3 -m http.server`). React 18, ReactDOM, and `@babel/standalone` are loaded from unpkg via the `<script>` tags in the HTML.
+- Open [index.html](index.html) directly in a browser, or serve the directory statically (e.g. `python3 -m http.server`). React 18, ReactDOM, and `@babel/standalone` are loaded from unpkg via the `<script>` tags in the HTML.
 - JSX files (`*.jsx`) are loaded with `type="text/babel"` and transpiled **in the browser at load time**. There is no pre-compile; save and refresh.
-- Script load order in [SRCafe.html](SRCafe.html) is load-bearing: `data.js` and `details.js` must run before the JSX files because they define the `window.CAFES` / `window.CAFE_DETAILS` globals the components read from. Preserve that order when adding scripts.
+- Script load order in [index.html](index.html) is load-bearing: `data.js` and `details.js` must run before the JSX files because they define the `window.CAFES` / `window.CAFE_DETAILS` globals the components read from. Preserve that order when adding scripts.
 
 ## Architecture
 
@@ -24,4 +24,4 @@ Single-page app rendered into `#root` by [src/app.jsx](src/app.jsx). All inter-f
 
 The app is designed to be embeddable in a parent editor iframe. On mount, `App` posts `{type: '__edit_mode_available'}` to `window.parent` and listens for `__activate_edit_mode` / `__deactivate_edit_mode` messages to toggle the `Tweaks` panel.
 
-The `/*EDITMODE-BEGIN*/ ... /*EDITMODE-END*/` comment markers in [SRCafe.html](SRCafe.html) (around `TWEAK_DEFAULTS`) and [src/app.jsx](src/app.jsx) (around the `tweaks` prop on `<Tweaks>`) are machine-parsed by the host editor — **keep them intact and on the same lines when editing those blocks**, and keep `TWEAK_DEFAULTS` in HTML in sync with the default-state shape in `useState(() => ... { accent, dark, live, density })`.
+The `/*EDITMODE-BEGIN*/ ... /*EDITMODE-END*/` comment markers in [index.html](index.html) (around `TWEAK_DEFAULTS`) and [src/app.jsx](src/app.jsx) (around the `tweaks` prop on `<Tweaks>`) are machine-parsed by the host editor — **keep them intact and on the same lines when editing those blocks**, and keep `TWEAK_DEFAULTS` in HTML in sync with the default-state shape in `useState(() => ... { accent, dark, live, density })`.
