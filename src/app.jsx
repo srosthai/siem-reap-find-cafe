@@ -1,12 +1,28 @@
 // SRCafe main app
 const { useState, useEffect, useMemo } = React;
 
+const SORT_OPTIONS = [
+  { id: 'trending', label: 'Trending',     icon: Icon.flame },
+  { id: 'distance', label: 'Distance',     icon: Icon.pin },
+  { id: 'wifi',     label: 'Wifi speed',   icon: Icon.wifi },
+  { id: 'price',    label: 'Price: low → high', icon: Icon.dollar },
+];
+
+const KNOWN_FILTERS = new Set(['trending','wifi','cheap','open']);
+
 function App() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(null);
   const [view, setView] = useState(() => localStorage.getItem('srcafe-view') || 'grid');
   const [sort, setSort] = useState('trending');
-  const [saved, setSaved] = useState(new Set());
+  const [page, setPage] = useState(() => localStorage.getItem('srcafe-page') || 'discover');
+  const [guideId, setGuideId] = useState(() => localStorage.getItem('srcafe-guide') || null);
+  const [saved, setSaved] = useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem('srcafe-saved') || '[]');
+      return new Set(Array.isArray(raw) ? raw : []);
+    } catch { return new Set(); }
+  });
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [detailId, setDetailId] = useState(() => {
     const id = parseInt(localStorage.getItem('srcafe-detail'));
@@ -19,10 +35,28 @@ function App() {
 
   useEffect(() => localStorage.setItem('srcafe-view', view), [view]);
   useEffect(() => localStorage.setItem('srcafe-tweaks', JSON.stringify(tweaks)), [tweaks]);
+  useEffect(() => localStorage.setItem('srcafe-page', page), [page]);
+  useEffect(() => localStorage.setItem('srcafe-saved', JSON.stringify([...saved])), [saved]);
+  useEffect(() => {
+    if (guideId) localStorage.setItem('srcafe-guide', guideId);
+    else localStorage.removeItem('srcafe-guide');
+  }, [guideId]);
   useEffect(() => {
     if (detailId) localStorage.setItem('srcafe-detail', String(detailId));
     else localStorage.removeItem('srcafe-detail');
   }, [detailId]);
+
+  const goto = (p) => {
+    setPage(p);
+    setGuideId(null);
+    setDetailId(null);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  const openCafe = (id) => setDetailId(id);
+  const openGuide = (id) => {
+    setGuideId(id);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
 
   // scroll-reveal observer
   useEffect(() => {
@@ -36,7 +70,7 @@ function App() {
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
     return () => obs.disconnect();
-  }, [view, filter, search]);
+  }, [view, filter, search, page, guideId, detailId]);
 
   // apply theme
   useEffect(() => {
@@ -73,6 +107,10 @@ function App() {
     if (filter === 'wifi') list = list.filter(c => c.wifi >= 70);
     if (filter === 'cheap') list = list.filter(c => c.cheap);
     if (filter === 'open') list = list.filter(c => c.open);
+    if (filter && !KNOWN_FILTERS.has(filter)) {
+      const q = filter.toLowerCase();
+      list = list.filter(c => c.vibes.some(v => v.toLowerCase().includes(q)));
+    }
 
     if (sort === 'trending') list.sort((a,b) => b.rating - a.rating);
     if (sort === 'distance') list.sort((a,b) => a.distance - b.distance);
@@ -88,9 +126,17 @@ function App() {
     { id: 'split', label: 'Split', icon: Icon.split },
   ];
 
+  const activeGuide = guideId ? (window.GUIDES || []).find(g => g.id === guideId) : null;
+
   return (
     <>
-      <DynamicIsland dark={tweaks.dark} onToggleDark={() => setTweaks({...tweaks, dark: !tweaks.dark})} />
+      <DynamicIsland
+        dark={tweaks.dark}
+        onToggleDark={() => setTweaks({...tweaks, dark: !tweaks.dark})}
+        page={page}
+        onNavigate={goto}
+        savedCount={saved.size}
+      />
       {detailId ? (
         <DetailPage
           cafe={window.CAFES.find(c => c.id === detailId) || window.CAFES[0]}
@@ -101,6 +147,28 @@ function App() {
             const next = ids[(i + dir + ids.length) % ids.length];
             setDetailId(next);
           }}
+        />
+      ) : activeGuide ? (
+        <GuideDetail
+          guide={activeGuide}
+          saved={saved}
+          onSave={onSave}
+          onOpen={openCafe}
+          onBack={() => setGuideId(null)}
+          onOpenGuide={openGuide}
+        />
+      ) : page === 'saved' ? (
+        <SavedPage
+          cafes={window.CAFES.filter(c => saved.has(c.id))}
+          saved={saved}
+          onSave={onSave}
+          onOpen={openCafe}
+          onDiscover={() => goto('discover')}
+        />
+      ) : page === 'guides' ? (
+        <GuidesPage
+          guides={window.GUIDES || []}
+          onOpenGuide={openGuide}
         />
       ) : (
       <>
@@ -121,22 +189,33 @@ function App() {
             </p>
           </div>
           <div className="results-controls">
-            <button className="sort-select" onClick={() => {
-              const opts = ['trending','distance','wifi','price'];
-              setSort(opts[(opts.indexOf(sort) + 1) % opts.length]);
-            }}>
-              Sort: {sort}
-              <div style={{width: 14, height: 14}}>{Icon.chevron}</div>
-            </button>
+            <Dropdown
+              label="Sort"
+              activeLabel={SORT_OPTIONS.find(o => o.id === sort)?.label}
+              align="right"
+              renderItems={({ close }) => (
+                SORT_OPTIONS.map(o => (
+                  <DropdownItem
+                    key={o.id}
+                    active={sort === o.id}
+                    onClick={() => { setSort(o.id); close(); }}
+                    icon={o.icon}
+                  >
+                    {o.label}
+                  </DropdownItem>
+                ))
+              )}
+            />
             <div className="view-toggle">
               {views.map(v => (
                 <button
                   key={v.id}
                   className={view === v.id ? 'active' : ''}
                   onClick={() => setView(v.id)}
+                  aria-label={v.label}
                 >
                   {v.icon}
-                  <span style={{display: view === v.id ? 'inline' : 'none'}}>{v.label}</span>
+                  {view === v.id && <span className="view-toggle-label">{v.label}</span>}
                 </button>
               ))}
             </div>
@@ -153,8 +232,8 @@ function App() {
             {filtered.map(c => <ListRow key={c.id} cafe={c} saved={saved.has(c.id)} onSave={onSave} onOpen={() => setDetailId(c.id)}/>)}
           </div>
         )}
-        {view === 'map' && <MapView cafes={filtered} saved={saved} onSave={onSave} />}
-        {view === 'split' && <SplitView cafes={filtered} saved={saved} onSave={onSave} />}
+        {view === 'map' && <MapView cafes={filtered} saved={saved} onSave={onSave} onOpen={openCafe} />}
+        {view === 'split' && <SplitView cafes={filtered} saved={saved} onSave={onSave} onOpen={openCafe} />}
 
         {filtered.length === 0 && (
           <div style={{padding: '80px 20px', textAlign: 'center', color: 'var(--ink-soft)'}}>
@@ -168,16 +247,16 @@ function App() {
         <div className="serif" style={{fontSize: 24, color: 'var(--ink)'}}>SRCafe</div>
         <div style={{display: 'flex', gap: 24}}>
           <a href="#">Add your café</a>
-          <a href="#">Guides</a>
-          <a href="#">About</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); goto('guides'); }}>Guides</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); goto('saved'); }}>Saved</a>
           <a href="#">hello@srcafe.com</a>
         </div>
         <div className="mono" style={{fontSize: 11}}>Siem Reap, Cambodia · MMXXVI</div>
       </footer>
 
-      <Tweaks open={tweaksOpen} tweaks={/*EDITMODE-BEGIN*/tweaks/*EDITMODE-END*/} setTweaks={setTweaks} onClose={() => setTweaksOpen(false)} />
       </>
       )}
+      <Tweaks open={tweaksOpen} tweaks={/*EDITMODE-BEGIN*/tweaks/*EDITMODE-END*/} setTweaks={setTweaks} onClose={() => setTweaksOpen(false)} />
     </>
   );
 }

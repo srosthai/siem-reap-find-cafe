@@ -1,5 +1,49 @@
 // Detail page components
-const { useState: useStateD, useEffect: useEffectD, useMemo: useMemoD } = React;
+const { useState: useStateD, useEffect: useEffectD, useMemo: useMemoD, useRef: useRefD } = React;
+
+function MiniMap({ cafe }) {
+  const ref = useRefD(null);
+  const mapRef = useRefD(null);
+  const tileRef = useRefD(null);
+
+  useEffectD(() => {
+    if (!window.L || !ref.current || mapRef.current) return;
+    const map = window.L.map(ref.current, {
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: false,
+      dragging: true,
+      doubleClickZoom: true,
+    }).setView([cafe.lat, cafe.lng], 15);
+    window.L.control.zoom({ position: 'topright' }).addTo(map);
+    const setTiles = () => {
+      if (tileRef.current) tileRef.current.remove();
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      tileRef.current = window.L.tileLayer(
+        dark
+          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        { attribution: '&copy; OSM &copy; CARTO', maxZoom: 19, subdomains: 'abcd' }
+      ).addTo(map);
+    };
+    setTiles();
+    const iconHtml = `<div class="leaf-pin active"><span class="leaf-pin-dot"></span><span class="leaf-pin-label">${cafe.name.replace(/"/g, '&quot;')}</span></div>`;
+    const icon = window.L.divIcon({
+      className: 'leaf-pin-wrap',
+      html: iconHtml,
+      iconSize: [220, 28],
+      iconAnchor: [7, 14],
+    });
+    window.L.marker([cafe.lat, cafe.lng], { icon }).addTo(map);
+    const obs = new MutationObserver(setTiles);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    mapRef.current = map;
+    setTimeout(() => map.invalidateSize(), 80);
+    return () => { obs.disconnect(); map.remove(); mapRef.current = null; tileRef.current = null; };
+  }, [cafe.id]);
+
+  return <div ref={ref} className="leaf-canvas" />;
+}
 
 function DetailPage({ cafe, onBack, onNav }) {
   const d = window.CAFE_DETAILS[cafe.id] || {};
@@ -67,8 +111,6 @@ function DetailPage({ cafe, onBack, onNav }) {
           <h1 className="dp-title">{cafe.name}</h1>
           <p className="dp-tagline">{cafe.tagline}</p>
           <div className="dp-metarow">
-            <span className="card-rating"><div style={{width: 16, height: 16}}>{Icon.star}</div><strong>{cafe.rating}</strong> <span className="reviews">({cafe.reviews.toLocaleString()} reviews)</span></span>
-            <span className="dp-dot">·</span>
             <PriceDots price={cafe.price} />
             <span className="dp-dot">·</span>
             <span className="card-meta-item"><div style={{width: 14, height: 14}}>{Icon.pin}</div>{d.address}</span>
@@ -156,68 +198,12 @@ function DetailPage({ cafe, onBack, onNav }) {
             </div>
           </section>
 
-          {/* Reviews */}
-          <section className="dp-section reveal">
-            <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20}}>
-              <h2 className="dp-h2" style={{margin: 0}}>Reviews</h2>
-              <a href="#" className="dp-link">See all {cafe.reviews.toLocaleString()} →</a>
-            </div>
-            <div className="dp-reviews-summary">
-              <div>
-                <div className="dp-big-rating">{cafe.rating}</div>
-                <div className="dp-rating-stars">★★★★★</div>
-                <div className="dp-live-sub">{cafe.reviews.toLocaleString()} reviews</div>
-              </div>
-              <div className="dp-review-bars">
-                {[5,4,3,2,1].map(n => {
-                  const pct = n === 5 ? 72 : n === 4 ? 18 : n === 3 ? 6 : n === 2 ? 3 : 1;
-                  return (
-                    <div key={n} className="dp-review-row">
-                      <span className="dp-review-num">{n}</span>
-                      <div className="dp-review-bar"><div style={{width: `${pct}%`}}/></div>
-                      <span className="dp-review-pct">{pct}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="dp-reviews">
-              {[
-                { name: "Léa M.", badge: "Nomad", days: "2d", rating: 5, text: "Took my laptop here for a full afternoon. Wifi didn't drop once, barista remembered my order by day two. Signature drink lived up to the hype." },
-                { name: "Kosal P.", badge: "Local", days: "1w", rating: 5, text: "One of the few places you get both good coffee AND good food. Not cheap but worth it for the setting." },
-                { name: "James T.", badge: "Visitor", days: "3w", rating: 4, text: "Great atmosphere. Bit busy at lunch — come early or late. Staff are lovely." },
-              ].map((r, i) => (
-                <div key={i} className="dp-review">
-                  <div className="dp-review-head">
-                    <div className="dp-avatar">{r.name[0]}</div>
-                    <div style={{flex: 1}}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                        <strong>{r.name}</strong>
-                        <span className="dp-badge-small">{r.badge}</span>
-                      </div>
-                      <div className="dp-live-sub">{r.days} ago · {'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</div>
-                    </div>
-                  </div>
-                  <p className="dp-review-text">{r.text}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
           {/* Location */}
           <section className="dp-section reveal">
             <h2 className="dp-h2">Location</h2>
             <div className="dp-map-block">
               <div className="dp-minimap">
-                <div className="map-canvas"/>
-                <div className="map-grid"/>
-                <div className="map-river"/>
-                <div className="map-pin active" style={{left: `${cafe.lng}%`, top: `${cafe.lat}%`}}>
-                  <div className="map-pin-body">
-                    <span className="map-pin-dot"/>
-                    {cafe.name.split(' ')[0]}
-                  </div>
-                </div>
+                <MiniMap cafe={cafe} />
               </div>
               <div className="dp-location-info">
                 <div className="dp-li-label">Address</div>

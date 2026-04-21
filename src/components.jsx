@@ -22,6 +22,56 @@ const Icon = {
   x: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>,
 };
 
+// ---------- DROPDOWN ----------
+function Dropdown({ label, icon, value, activeLabel, align = 'right', badge = null, children, renderItems }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  return (
+    <div className={`dd ${open ? 'dd-open' : ''}`} ref={wrapRef}>
+      <button className="dd-trigger" onClick={() => setOpen(v => !v)} aria-expanded={open}>
+        {icon && <span className="dd-trigger-icon">{icon}</span>}
+        <span className="dd-trigger-label">
+          {label}{activeLabel && <span className="dd-trigger-value"> {activeLabel}</span>}
+        </span>
+        {badge != null && <span className="dd-trigger-badge">{badge}</span>}
+        <span className="dd-chev" style={{width: 12, height: 12}}>{Icon.chevron}</span>
+      </button>
+      {open && (
+        <div className={`dd-menu dd-menu-${align}`} role="menu">
+          {renderItems ? renderItems({ close, value }) : children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({ active, onClick, icon, children, trailing }) {
+  return (
+    <button className={`dd-item ${active ? 'dd-item-active' : ''}`} role="menuitem" onClick={onClick}>
+      {icon && <span className="dd-item-icon">{icon}</span>}
+      <span className="dd-item-label">{children}</span>
+      {trailing != null ? trailing : (active && <span className="dd-item-check" style={{width: 14, height: 14}}>{Icon.check}</span>)}
+    </button>
+  );
+}
+
 // ---------- DYNAMIC ISLAND NAV ----------
 function useScrolled(threshold = 40) {
   const [scrolled, setScrolled] = useState(false);
@@ -34,7 +84,7 @@ function useScrolled(threshold = 40) {
   return scrolled;
 }
 
-function DynamicIsland({ dark, onToggleDark }) {
+function DynamicIsland({ dark, onToggleDark, page = 'discover', onNavigate = () => {}, savedCount = 0 }) {
   const [live, setLive] = useState({ name: "Temple Coffee", busy: "Moderately busy · 12 min wait" });
   const [idx, setIdx] = useState(0);
   const scrolled = useScrolled(60);
@@ -57,14 +107,16 @@ function DynamicIsland({ dark, onToggleDark }) {
   return (
     <div className="di-wrap">
       <div className={`di ${scrolled ? 'di-compact' : ''}`}>
-        <div className="di-logo">
+        <button className="di-logo" onClick={() => onNavigate('discover')} title="Home">
           <span className="di-logo-dot" />
           <span>SRCafe</span>
-        </div>
+        </button>
         {!scrolled && <nav className="di-nav">
-          <a href="#" className="active">Discover</a>
-          <a href="#">Saved</a>
-          <a href="#">Guides</a>
+          <button className={page === 'discover' ? 'active' : ''} onClick={() => onNavigate('discover')}>Discover</button>
+          <button className={page === 'saved' ? 'active' : ''} onClick={() => onNavigate('saved')}>
+            Saved{savedCount > 0 && <span className="di-count">{savedCount}</span>}
+          </button>
+          <button className={page === 'guides' ? 'active' : ''} onClick={() => onNavigate('guides')}>Guides</button>
         </nav>}
         <div className="di-live" key={idx}>
           <span className="di-live-dot" />
@@ -112,6 +164,15 @@ function CountUp({ end, duration = 1400, suffix = '' }) {
 }
 
 // ---------- HERO ----------
+const MORE_FILTERS = [
+  { id: "work-friendly", label: "Work-friendly", icon: Icon.wifi },
+  { id: "quiet",         label: "Quiet",         icon: Icon.list },
+  { id: "outdoor",       label: "Outdoor",       icon: Icon.pin },
+  { id: "date night",    label: "Date night",    icon: Icon.heart },
+  { id: "brunch",        label: "Brunch",        icon: Icon.clock },
+  { id: "books",         label: "Books",         icon: Icon.tag },
+];
+
 function Hero({ search, setSearch, filter, setFilter }) {
   const chips = [
     { id: "trending", label: "Trending", icon: Icon.flame },
@@ -144,7 +205,7 @@ function Hero({ search, setSearch, filter, setFilter }) {
           onChange={(e) => setSearch(e.target.value)}
         />
         <button className="search-btn">
-          Search
+          <span className="search-btn-label">Search</span>
           <div style={{width: 16, height: 16}}>{Icon.arrow}</div>
         </button>
       </div>
@@ -166,10 +227,35 @@ function Hero({ search, setSearch, filter, setFilter }) {
             {filter === c.id && <div style={{width: 14, height: 14, marginLeft: 2}}>{Icon.x}</div>}
           </button>
         ))}
-        <button className="chip" style={{color: 'var(--ink-faint)'}}>
-          More filters
-          <div style={{width: 12, height: 12}}>{Icon.chevron}</div>
-        </button>
+        <Dropdown
+          label="More filters"
+          align="left"
+          badge={MORE_FILTERS.some(m => m.id === filter) ? 1 : null}
+          renderItems={({ close }) => (
+            <>
+              <div className="dd-section-label">Refine by vibe</div>
+              {MORE_FILTERS.map(m => (
+                <DropdownItem
+                  key={m.id}
+                  active={filter === m.id}
+                  onClick={() => { setFilter(filter === m.id ? null : m.id); close(); }}
+                  icon={m.icon}
+                >
+                  {m.label}
+                </DropdownItem>
+              ))}
+              {filter && (
+                <>
+                  <div className="dd-divider"/>
+                  <button className="dd-clear" onClick={() => { setFilter(null); close(); }}>
+                    Clear filter
+                    <div style={{width: 12, height: 12}}>{Icon.x}</div>
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        />
       </div>
 
       <div className="hero-stats">
@@ -238,10 +324,6 @@ function CafeCard({ cafe, saved, onSave, onOpen }) {
             <h3 className="card-name">{cafe.name}</h3>
             <p className="card-tag">{cafe.tagline}</p>
           </div>
-          <div className="card-rating">
-            <div style={{width: 14, height: 14}}>{Icon.star}</div>
-            {cafe.rating}
-          </div>
         </div>
         <div className="card-vibes">
           {cafe.vibes.map(v => <span key={v} className="vibe-tag">{v}</span>)}
@@ -287,8 +369,6 @@ function ListRow({ cafe, saved, onSave, onOpen }) {
       </div>
       <div className="list-signature">"{cafe.signature}"</div>
       <div className="list-actions">
-        <div className="list-rating-big">{cafe.rating}</div>
-        <div className="list-rating-sub">{cafe.reviews.toLocaleString()} reviews</div>
         <button className={`card-save ${saved ? 'saved' : ''}`} style={{position: 'static', marginTop: 4}} onClick={() => onSave(cafe.id)}>
           {Icon.heart}
         </button>
@@ -298,56 +378,109 @@ function ListRow({ cafe, saved, onSave, onOpen }) {
 }
 
 // ---------- MAP ----------
-function MapView({ cafes, saved, onSave, compact = false }) {
+// Tile URLs for light / dark themes
+const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+function useLeafletTheme(mapRef, tileRef) {
+  useEffect(() => {
+    const swap = () => {
+      const map = mapRef.current;
+      if (!map || !window.L) return;
+      if (tileRef.current) tileRef.current.remove();
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      tileRef.current = window.L.tileLayer(dark ? TILE_DARK : TILE_LIGHT, {
+        attribution: TILE_ATTRIB, maxZoom: 19, subdomains: 'abcd',
+      }).addTo(map);
+    };
+    swap();
+    const obs = new MutationObserver(swap);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+}
+
+function MapView({ cafes, saved, onSave, onOpen, compact = false }) {
   const [active, setActive] = useState(cafes[0]?.id ?? null);
   const activeCafe = cafes.find(c => c.id === active);
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const tileRef = useRef(null);
+  const markersRef = useRef({});
+
+  // init map once
+  useEffect(() => {
+    if (!window.L || !containerRef.current || mapRef.current) return;
+    const map = window.L.map(containerRef.current, {
+      zoomControl: false,
+      attributionControl: true,
+      scrollWheelZoom: true,
+      zoomSnap: 0.25,
+    }).setView([13.3533, 103.858], 14);
+    window.L.control.zoom({ position: 'topright' }).addTo(map);
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; tileRef.current = null; markersRef.current = {}; };
+  }, []);
+
+  useLeafletTheme(mapRef, tileRef);
+
+  // rebuild markers when cafe list changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !window.L) return;
+    Object.values(markersRef.current).forEach(m => m.remove());
+    markersRef.current = {};
+    const coords = [];
+    cafes.forEach(c => {
+      if (typeof c.lat !== 'number' || typeof c.lng !== 'number') return;
+      const html = `<div class="leaf-pin"><span class="leaf-pin-dot"></span><span class="leaf-pin-label">${c.name.replace(/"/g, '&quot;')}</span></div>`;
+      const icon = window.L.divIcon({
+        className: 'leaf-pin-wrap',
+        html,
+        iconSize: [220, 28],
+        iconAnchor: [7, 14],
+      });
+      const marker = window.L.marker([c.lat, c.lng], { icon, riseOnHover: true }).addTo(map);
+      marker.on('click', () => {
+        setActive(c.id);
+        map.panTo([c.lat, c.lng], { animate: true, duration: 0.4 });
+      });
+      markersRef.current[c.id] = marker;
+      coords.push([c.lat, c.lng]);
+    });
+    if (coords.length > 0) {
+      map.fitBounds(coords, { padding: [60, 60], maxZoom: 15, animate: false });
+    }
+    setTimeout(() => map.invalidateSize(), 80);
+  }, [cafes]);
+
+  // reflect active state on markers
+  useEffect(() => {
+    Object.entries(markersRef.current).forEach(([id, marker]) => {
+      const el = marker.getElement();
+      if (!el) return;
+      const pin = el.querySelector('.leaf-pin');
+      if (!pin) return;
+      if (String(active) === id) {
+        pin.classList.add('active');
+        marker.setZIndexOffset(1000);
+      } else {
+        pin.classList.remove('active');
+        marker.setZIndexOffset(0);
+      }
+    });
+  }, [active, cafes]);
 
   return (
     <div className={compact ? "split-map" : "map-wrap"} style={compact ? {height: '100%'} : {}}>
-      <div className="map-canvas" />
-      <div className="map-grid" />
-      <div className="map-river" />
-      {/* roads */}
-      <div className="map-road" style={{top: '30%', left: '10%', right: '10%', height: 3}}/>
-      <div className="map-road" style={{top: '65%', left: '5%', right: '20%', height: 3, transform: 'rotate(-2deg)'}}/>
-      <div className="map-road" style={{top: '15%', bottom: '15%', left: '60%', width: 3, transform: 'rotate(4deg)'}}/>
+      <div ref={containerRef} className="leaf-canvas" />
 
-      {/* labels */}
-      <div className="map-label" style={{top: '12%', left: '15%'}}>Pub Street</div>
-      <div className="map-label" style={{top: '55%', left: '70%'}}>Wat Bo</div>
-      <div className="map-label" style={{top: '78%', left: '20%'}}>Kingdom Rd</div>
-      <div className="map-label" style={{top: '35%', left: '40%'}}>Siem Reap River →</div>
-
-      {/* pins */}
-      {cafes.map(c => (
-        <div
-          key={c.id}
-          className={`map-pin ${active === c.id ? 'active' : ''}`}
-          style={{ left: `${c.lng}%`, top: `${c.lat}%` }}
-          onClick={() => setActive(c.id)}
-        >
-          <div className="map-pin-body">
-            <span className="map-pin-dot" />
-            {c.name.split(' ').slice(0, 2).join(' ')}
-          </div>
-        </div>
-      ))}
-
-      {/* controls */}
-      <div className="map-controls">
-        <button>+</button>
-        <button>−</button>
-      </div>
-
-      {/* peek */}
       {activeCafe && !compact && (
         <div className="map-peek" key={activeCafe.id}>
           <div className="map-peek-photo"><img src={activeCafe.photo} alt=""/></div>
           <div className="map-peek-body">
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-              <h4 className="card-name" style={{fontSize: 22}}>{activeCafe.name}</h4>
-              <div className="card-rating"><div style={{width: 14, height: 14}}>{Icon.star}</div>{activeCafe.rating}</div>
-            </div>
+            <h4 className="card-name" style={{fontSize: 22}}>{activeCafe.name}</h4>
             <p className="card-tag">{activeCafe.tagline}</p>
             <div className="card-meta" style={{marginTop: 10, paddingTop: 10}}>
               <PriceDots price={activeCafe.price} />
@@ -356,24 +489,23 @@ function MapView({ cafes, saved, onSave, compact = false }) {
               <span className="card-meta-sep">·</span>
               <span className="card-meta-item"><div style={{width: 12, height: 12}}>{Icon.pin}</div>{activeCafe.distance}km</span>
             </div>
-            <button className="search-btn" style={{marginTop: 12, width: '100%', justifyContent: 'center', padding: '10px 16px', fontSize: 13}}>
+            <button
+              className="search-btn"
+              style={{marginTop: 12, width: '100%', justifyContent: 'center', padding: '10px 16px', fontSize: 13}}
+              onClick={() => onOpen && onOpen(activeCafe.id)}
+            >
               View details
               <div style={{width: 14, height: 14}}>{Icon.arrow}</div>
             </button>
           </div>
         </div>
       )}
-
-      {/* attribution */}
-      <div style={{position: 'absolute', bottom: 8, right: 8, fontSize: 10, color: 'rgba(27,24,20,.35)', fontFamily: 'Geist Mono'}}>
-        SRCafe Maps · © OpenStreet-ish
-      </div>
     </div>
   );
 }
 
 // ---------- SPLIT VIEW ----------
-function SplitView({ cafes, saved, onSave }) {
+function SplitView({ cafes, saved, onSave, onOpen }) {
   const [active, setActive] = useState(cafes[0]?.id ?? null);
   return (
     <div className="split">
@@ -382,17 +514,12 @@ function SplitView({ cafes, saved, onSave }) {
           <div
             key={c.id}
             className={`split-card ${active === c.id ? 'active' : ''}`}
-            onClick={() => setActive(c.id)}
+            onClick={() => { setActive(c.id); if (onOpen) onOpen(c.id); }}
           >
             <div className="split-card-photo"><img src={c.photo} alt={c.name} loading="lazy"/></div>
             <div style={{padding: '4px 6px 4px 0', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0}}>
               <div>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8}}>
-                  <h4 className="card-name" style={{fontSize: 20}}>{c.name}</h4>
-                  <div className="card-rating" style={{fontSize: 13}}>
-                    <div style={{width: 12, height: 12}}>{Icon.star}</div>{c.rating}
-                  </div>
-                </div>
+                <h4 className="card-name" style={{fontSize: 20}}>{c.name}</h4>
                 <p className="card-tag" style={{fontSize: 12, marginTop: 2}}>{c.tagline}</p>
               </div>
               <div style={{display: 'flex', gap: 10, fontSize: 11, color: 'var(--ink-soft)', alignItems: 'center', flexWrap: 'wrap'}}>
@@ -406,7 +533,7 @@ function SplitView({ cafes, saved, onSave }) {
           </div>
         ))}
       </div>
-      <MapView cafes={cafes} saved={saved} onSave={onSave} compact />
+      <MapView cafes={cafes} saved={saved} onSave={onSave} onOpen={onOpen} compact />
     </div>
   );
 }
@@ -471,6 +598,188 @@ function Tweaks({ open, tweaks, setTweaks, onClose }) {
   );
 }
 
+// ---------- SAVED PAGE ----------
+function SavedPage({ cafes, saved, onSave, onOpen, onDiscover }) {
+  const empty = cafes.length === 0;
+  return (
+    <section className="page page-saved">
+      <header className="page-head reveal">
+        <div className="hero-eyebrow">
+          <span className="hero-eyebrow-dot" />
+          <span>Your list · {cafes.length} {cafes.length === 1 ? 'café' : 'cafés'}</span>
+        </div>
+        <h1 className="page-title">
+          {empty ? (<>Nothing saved.<br/><em>Yet.</em></>) : (<>Kept for <em>later</em>.</>)}
+        </h1>
+        <p className="page-sub">
+          {empty
+            ? 'Tap the heart on any café and it will land here. A quiet corner for the ones you want to circle back to.'
+            : 'A private reading list of cafés you flagged. Re-open a card to see hours, signature drinks, and the wifi you remembered liking.'}
+        </p>
+      </header>
+
+      {empty ? (
+        <div className="saved-empty reveal">
+          <div className="saved-empty-mark" aria-hidden>
+            <svg viewBox="0 0 120 120" width="120" height="120" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M60 102s-34-20-42-46a20 20 0 0 1 42-12 20 20 0 0 1 42 12c-8 26-42 46-42 46Z"/>
+            </svg>
+            <span className="saved-empty-tag mono">0 cafés</span>
+          </div>
+          <div className="saved-empty-rule"/>
+          <button className="btn-pill" onClick={onDiscover}>
+            Start browsing
+            <div style={{width: 14, height: 14}}>{Icon.arrow}</div>
+          </button>
+        </div>
+      ) : (
+        <div className="grid reveal">
+          {cafes.map(c => (
+            <CafeCard key={c.id} cafe={c} saved={saved.has(c.id)} onSave={onSave} onOpen={() => onOpen(c.id)} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- GUIDES INDEX ----------
+function GuidesPage({ guides, onOpenGuide }) {
+  return (
+    <section className="page page-guides">
+      <header className="page-head reveal">
+        <div className="hero-eyebrow">
+          <span className="hero-eyebrow-dot" />
+          <span>Volume 1 · MMXXVI</span>
+        </div>
+        <h1 className="page-title">
+          The café <em>atlas</em>.
+        </h1>
+        <p className="page-sub">
+          Three curated routes through Siem Reap — one for heads-down work, one for the river brunch ritual, one for the $2 coffee kind of day.
+        </p>
+      </header>
+
+      <div className="guide-grid">
+        {guides.map((g, i) => (
+          <button
+            key={g.id}
+            className="guide-card reveal"
+            style={{'--guide-tint': g.color}}
+            onClick={() => onOpenGuide(g.id)}
+          >
+            <span className="guide-num mono">{String(i + 1).padStart(2, '0')}</span>
+            <div className="guide-cover">
+              <img src={g.cover} alt={g.title} loading="lazy"/>
+              <div className="guide-cover-veil" />
+            </div>
+            <div className="guide-meta">
+              <span className="guide-kicker mono">{g.kicker}</span>
+              <h3 className="guide-title">{g.title}</h3>
+              <p className="guide-sub">{g.subtitle}</p>
+              <div className="guide-foot">
+                <span>{g.cafeIds.length} cafés</span>
+                <span className="guide-arrow" style={{width: 16, height: 16}}>{Icon.arrow}</span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------- GUIDE DETAIL ----------
+function GuideDetail({ guide, saved, onSave, onOpen, onBack, onOpenGuide }) {
+  const cafes = guide.cafeIds.map(id => window.CAFES.find(c => c.id === id)).filter(Boolean);
+  const others = (window.GUIDES || []).filter(g => g.id !== guide.id);
+  return (
+    <section className="page page-guide-detail" style={{'--guide-tint': guide.color}}>
+      <div className="detail-breadcrumb reveal">
+        <button onClick={onBack} className="dp-back">
+          <div style={{width: 14, height: 14, transform: 'rotate(180deg)'}}>{Icon.arrow}</div>
+          All guides
+        </button>
+        <div className="dp-breadcrumb-trail">
+          <a href="#" onClick={(e) => { e.preventDefault(); onBack(); }}>Guides</a> <span>/</span> <strong>{guide.title}</strong>
+        </div>
+      </div>
+
+      <div className="gd-hero reveal">
+        <div className="gd-hero-cover">
+          <img src={guide.cover} alt={guide.title} />
+          <div className="gd-hero-veil" />
+        </div>
+        <div className="gd-hero-copy">
+          <span className="guide-kicker mono">{guide.kicker}</span>
+          <h1 className="gd-title">{guide.title}</h1>
+          <p className="gd-lead serif">{guide.subtitle}</p>
+        </div>
+      </div>
+
+      <div className="gd-body">
+        <aside className="gd-note reveal">
+          <span className="gd-note-label mono">Editor&apos;s note</span>
+          <p>{guide.body}</p>
+        </aside>
+
+        <ol className="gd-list">
+          {cafes.map((c, i) => (
+            <li key={c.id} className="gd-row reveal" onClick={() => onOpen(c.id)}>
+              <span className="gd-row-num serif">{String(i + 1).padStart(2, '0')}</span>
+              <div className="gd-row-photo">
+                <img src={c.photo} alt={c.name} loading="lazy"/>
+                <button
+                  className={`card-save ${saved.has(c.id) ? 'saved' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); onSave(c.id); }}
+                  aria-label="Save"
+                >
+                  {Icon.heart}
+                </button>
+              </div>
+              <div className="gd-row-body">
+                <h3 className="gd-row-name serif">{c.name}</h3>
+                <p className="gd-row-tag">{c.tagline}</p>
+                <p className="gd-row-sig">&ldquo;{c.signature}&rdquo;</p>
+                <div className="gd-row-meta">
+                  <span><div style={{width: 12, height: 12}}>{Icon.pin}</div>{c.distance}km</span>
+                  <span><div style={{width: 12, height: 12}}>{Icon.wifi}</div>{c.wifi} mbps</span>
+                  <span>{c.price}</span>
+                  <span style={{color: c.open ? 'var(--moss)' : 'var(--accent)'}}>
+                    {c.open ? 'Open now' : 'Closed'}
+                  </span>
+                </div>
+              </div>
+              <div className="gd-row-go" style={{width: 16, height: 16}}>{Icon.arrow}</div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {others.length > 0 && (
+        <div className="gd-more reveal">
+          <div className="gd-more-head">
+            <span className="hero-eyebrow-dot" />
+            <span className="mono" style={{fontSize: 12, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>Keep reading</span>
+          </div>
+          <div className="gd-more-grid">
+            {others.map(g => (
+              <button key={g.id} className="gd-more-card" onClick={() => onOpenGuide(g.id)}>
+                <div className="gd-more-cover"><img src={g.cover} alt={g.title} loading="lazy"/></div>
+                <div>
+                  <span className="guide-kicker mono">{g.kicker}</span>
+                  <h4 className="serif" style={{fontSize: 28, lineHeight: 1, marginTop: 6, letterSpacing: '-.01em'}}>{g.title}</h4>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 Object.assign(window, {
-  Icon, DynamicIsland, Hero, CafeCard, ListRow, MapView, SplitView, Tweaks
+  Icon, DynamicIsland, Hero, CafeCard, ListRow, MapView, SplitView, Tweaks,
+  SavedPage, GuidesPage, GuideDetail, Dropdown, DropdownItem
 });

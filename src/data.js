@@ -1,4 +1,5 @@
 // Cafe data for SRCafe — Siem Reap cafe finder
+// lat/lng are real Siem Reap coordinates (center ~13.3533, 103.858)
 window.CAFES = [
   {
     id: 1,
@@ -16,7 +17,7 @@ window.CAFES = [
     hours: "7am – 9pm",
     trending: true,
     cheap: false,
-    lat: 47, lng: 42,
+    lat: 13.3507, lng: 103.8561,
   },
   {
     id: 2,
@@ -34,7 +35,7 @@ window.CAFES = [
     hours: "7am – 5pm",
     trending: true,
     cheap: false,
-    lat: 38, lng: 55,
+    lat: 13.3479, lng: 103.8538,
   },
   {
     id: 3,
@@ -52,7 +53,7 @@ window.CAFES = [
     hours: "8am – 10pm",
     trending: false,
     cheap: true,
-    lat: 62, lng: 38,
+    lat: 13.3494, lng: 103.8592,
   },
   {
     id: 4,
@@ -70,7 +71,7 @@ window.CAFES = [
     hours: "6am – 6pm",
     trending: false,
     cheap: true,
-    lat: 71, lng: 62,
+    lat: 13.3561, lng: 103.8641,
   },
   {
     id: 5,
@@ -88,7 +89,7 @@ window.CAFES = [
     hours: "Opens 9am tomorrow",
     trending: true,
     cheap: false,
-    lat: 52, lng: 70,
+    lat: 13.3540, lng: 103.8619,
   },
   {
     id: 6,
@@ -106,7 +107,7 @@ window.CAFES = [
     hours: "6am – 11pm",
     trending: true,
     cheap: true,
-    lat: 30, lng: 48,
+    lat: 13.3521, lng: 103.8558,
   },
   {
     id: 7,
@@ -124,7 +125,7 @@ window.CAFES = [
     hours: "11am – 10pm",
     trending: false,
     cheap: false,
-    lat: 45, lng: 35,
+    lat: 13.3531, lng: 103.8570,
   },
   {
     id: 8,
@@ -142,7 +143,7 @@ window.CAFES = [
     hours: "7am – 10pm",
     trending: false,
     cheap: true,
-    lat: 58, lng: 52,
+    lat: 13.3548, lng: 103.8547,
   },
   {
     id: 9,
@@ -160,6 +161,6 @@ window.CAFES = [
     hours: "3pm – midnight",
     trending: true,
     cheap: false,
-    lat: 33, lng: 45,
+    lat: 13.3514, lng: 103.8566,
   },
 ];
