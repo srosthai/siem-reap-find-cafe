@@ -254,6 +254,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 20;
 }
 .chip {
   display: inline-flex;
@@ -326,6 +328,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 12px;
   align-items: center;
+  position: relative;
+  z-index: 20;
 }
 /* ====== DROPDOWN ====== */
 .dd {
