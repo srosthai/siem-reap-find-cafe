@@ -111,26 +111,44 @@ function DynamicIsland({ dark, onToggleDark, page = 'discover', onNavigate = () 
           <span className="di-logo-dot" />
           <span>SRCafe</span>
         </button>
-        {!scrolled && <nav className="di-nav">
-          <button className={page === 'discover' ? 'active' : ''} onClick={() => onNavigate('discover')}>Discover</button>
-          <button className={page === 'saved' ? 'active' : ''} onClick={() => onNavigate('saved')}>
-            Saved{savedCount > 0 && <span className="di-count">{savedCount}</span>}
+        <nav className="di-nav">
+          <button
+            className={page === 'discover' ? 'active' : ''}
+            onClick={() => onNavigate('discover')}
+            aria-label="Discover"
+          >
+            <span className="di-nav-icon">{Icon.grid}</span>
+            <span className="di-nav-label">Discover</span>
           </button>
-          <button className={page === 'guides' ? 'active' : ''} onClick={() => onNavigate('guides')}>Guides</button>
-        </nav>}
+          <button
+            className={page === 'saved' ? 'active' : ''}
+            onClick={() => onNavigate('saved')}
+            aria-label="Saved"
+          >
+            <span className="di-nav-icon">{Icon.heart}</span>
+            <span className="di-nav-label">Saved</span>
+            {savedCount > 0 && <span className="di-count">{savedCount}</span>}
+          </button>
+          <button
+            className={page === 'guides' ? 'active' : ''}
+            onClick={() => onNavigate('guides')}
+            aria-label="Guides"
+          >
+            <span className="di-nav-icon">{Icon.list}</span>
+            <span className="di-nav-label">Guides</span>
+          </button>
+        </nav>
         <div className="di-live" key={idx}>
           <span className="di-live-dot" />
           <span><strong style={{fontWeight: 600, color: '#F6F1E8'}}>{live.name}</strong> · {live.busy}</span>
         </div>
-        {!scrolled && (
-          <button className="di-theme" onClick={onToggleDark} title={dark ? 'Light mode' : 'Dark mode'}>
-            {dark ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-            )}
-          </button>
-        )}
+        <button className="di-theme" onClick={onToggleDark} title={dark ? 'Light mode' : 'Dark mode'} aria-label="Toggle theme">
+          {dark ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -187,8 +205,7 @@ function Hero({ search, setSearch, filter, setFilter }) {
         <span>Siem Reap · 312 cafes indexed</span>
       </div>
       <h1 className="hero-title">
-        Every good café in<br/>
-        Siem Reap, <em>mapped.</em>
+        Every good café in{' '}<br/>Siem Reap, <em>mapped.</em>
       </h1>
       <p className="hero-sub">
         Skip the tripadvisor rabbit hole. Find specialty coffee, 50mbps wifi, and riverside brunch — filtered the way nomads actually search.
@@ -473,7 +490,7 @@ function MapView({ cafes, saved, onSave, onOpen, compact = false }) {
   }, [active, cafes]);
 
   return (
-    <div className={compact ? "split-map" : "map-wrap"} style={compact ? {height: '100%'} : {}}>
+    <div className={compact ? "split-map" : "map-wrap"}>
       <div ref={containerRef} className="leaf-canvas" />
 
       {activeCafe && !compact && (
