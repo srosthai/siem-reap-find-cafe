@@ -278,12 +278,12 @@ function DetailPage({ cafe, onBack, onNav }) {
       </div>
 
       {/* Similar */}
-      <section className="dp-section reveal" style={{maxWidth: 1440, margin: '0 auto', padding: '40px 32px 80px'}}>
-        <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20}}>
+      <section className="dp-section reveal dp-similar">
+        <div className="dp-similar-head">
           <h2 className="dp-h2" style={{margin: 0}}>You might also like</h2>
           <a href="#" className="dp-link">Browse all →</a>
         </div>
-        <div className="grid" style={{gridTemplateColumns: 'repeat(3, 1fr)'}}>
+        <div className="grid dp-similar-grid">
           {similar.map(c => <CafeCard key={c.id} cafe={c} saved={false} onSave={()=>{}} />)}
         </div>
       </section>

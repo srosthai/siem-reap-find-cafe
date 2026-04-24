@@ -556,3 +556,33 @@
   .dp-grid { padding: 0 14px; }
   .dp-metarow { gap: 6px 10px; font-size: 12px; }
 }
+
+/* ====== "You might also like" ====== */
+.dp-similar {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+}
+.dp-similar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dp-similar-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 980px) {
+  .dp-similar { padding: 32px 24px 64px; }
+  .dp-similar-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+}
+
+@media (max-width: 560px) {
+  .dp-similar { padding: 24px 18px 56px; }
+  .dp-similar-grid { grid-template-columns: 1fr; gap: 14px; }
+  .dp-similar-head { margin-bottom: 14px; }
+}
